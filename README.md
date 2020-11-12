@@ -53,15 +53,15 @@ const CdnCacheRefresh =  new CdnCacheRefresh({
   aliOss: {
     accessKeyId: "xxx",
     accessKeySecret: "xxx",
-    domain: "http://busi.rrcimg.com",
+    domain: "xxx",
     dist: "dist/xxx",
     filesNames: ["750.js",'750.js.map'],
-    endpoint: "https://cdn.aliyuncs.com",
+    endpoint: "xxx",
     apiVersion: "2018-05-10",
     ObjectType: "File",
     RegionId: "cn-hangzhou",
   },
-}).apply();
+})
 
 // Webpack 的配置
 module.exports = {
@@ -84,10 +84,10 @@ const CdnCacheRefresh = require('cdn-cache-refresh');
   aliOss: {
     accessKeyId: "xxx",
     accessKeySecret: "xxx",
-    domain: "http://busi.rrcimg.com",
+    domain: "xxx",
     dist: "dist/xxx",
     filesNames: ["750.js",'750.js.map'],
-    endpoint: "https://cdn.aliyuncs.com",
+    endpoint: "xxx",
     apiVersion: "2018-05-10",
     ObjectType: "File",
     RegionId: "cn-hangzhou",
