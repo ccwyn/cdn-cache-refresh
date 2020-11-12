@@ -11,23 +11,23 @@ const tip = (completeFiles, total) => {
 };
 
 const checkOptions = (options = {}) => {
-  const { type } = options;
+  const type = Object.keys(options);
   let errStr = "";
-  if (!type || type.length === 0) {
-    errStr = "\ntype not specified";
+  if (type.length === 0) {
+    errStr = "\n type not specified";
     return errStr;
   }
   if (type.includes("qiniu")) {
-    if (!options.accessKey) errStr += "\naccessKey not specified";
-    if (!options.secretKey) errStr += "\nsecretKey not specified";
-    if (!options.qnCdnDomain) errStr += "\nqnCdnDomain not specified";
-    if (!options.qnDist) errStr += "\nqnDist not specified";
+    if (!options.qiniu.accessKey) errStr += "\n accessKey not specified";
+    if (!options.qiniu.secretKey) errStr += "\n secretKey not specified";
+    if (!options.qiniu.domain) errStr += "\n qiniu domain not specified";
+    if (!options.qiniu.dist) errStr += "\n qiniu dist not specified";
   }
-  if (type.includes("ali-oss")) {
-    if (!options.accessKeyId) errStr += "\naccessKeyId not specified";
-    if (!options.accessKeySecret) errStr += "\naccessKeySecret not specified";
-    if (!options.aliCdnDomain) errStr += "\naliCdnDomain not specified";
-    if (!options.aliDist) errStr += "\naliDist not specified";
+  if (type.includes("aliOss")) {
+    if (!options.aliOss.accessKeyId) errStr += "\n accessKeyId not specified";
+    if (!options.aliOss.accessKeySecret) errStr += "\n accessKeySecret not specified";
+    if (!options.aliOss.domain) errStr += "\n aliOss domain not specified";
+    if (!options.aliOss.dist) errStr += "\n aliOss dist not specified";
   }
   return errStr;
 };
@@ -47,143 +47,137 @@ const handlePaths = (domain, dist, filesNames) => {
 };
 
 class CdnCacheRefresh {
-  constructor(options) {
-    this.config = Object.assign({}, options);
-    this.configErrStr = checkOptions(options);
+  constructor(options = {}) {
+    this.config = JSON.parse(JSON.stringify(options));
+    this.configErrStr = checkOptions(this.config);
     if (this.configErrStr) throw new Error(this.configErrStr);
+    this.webPackFilesName = [];
+    this.spinner = ora({ color: "green", text: "refresh cnd start" })
   }
   apply(compiler) {
-    const filesNames = [];
-    const spinner = ora({
-      color: "green",
-      text: "=====refresh cnd start=====",
-    }).start();
-    const refreshUrlsQn = (urlsToRefresh, cdnManager) => {
-      return new Promise((resolve, reject) => {
-        cdnManager.refreshUrls(urlsToRefresh, (err, respBody, respInfo) => {
-          if (err) reject(err);
-          if (respInfo.statusCode == 200) {
-            resolve(respBody);
-          }
-        });
-      });
-    };
-    const doWithWebpack = async (compilation, callback) => {
-      const { type } = this.config;
-      for (var i = 0; i < type.length; i++) {
-        try {
-          await reFreshFiles(type[i]);
-        } catch (error) {
-          throw new Error(error);
-        }
-      }
-      spinner.succeed();
-      callback();
-    };
-    const doWithoutWebpack = async () => {
-      const { type } = this.config;
-      for (var i = 0; i < type.length; i++) {
-        try {
-          await reFreshFiles(type[i]);
-        } catch (error) {
-          throw new Error(error);
-        }
-      }
-      spinner.succeed();
-    };
-    const reFreshFiles = async (type) => {
-      if (type.includes("qiniu")) {
-        const {
-          accessKey,
-          secretKey,
-          qnCdnDomain,
-          qnDist,
-          qnFilesNames,
-        } = this.config;
-        let mac = new qiniu.auth.digest.Mac(accessKey, secretKey);
-        let cdnManager = new qiniu.cdn.CdnManager(mac);
-        let refreshUrls =
-          qnFilesNames && qnFilesNames.length
-            ? handlePaths(qnCdnDomain, qnDist, qnFilesNames)
-            : handlePaths(qnCdnDomain, qnDist, filesNames);
-        let filesTotal = refreshUrls.length;
-        let completeFiles = 0;
-        let filesNamesSplit = chunk(refreshUrls, 99);
-        // 刷新链接，单次请求链接不可以超过100个，如果超过，请分批发送请求
-        for (var i = 0; i < filesNamesSplit.length; i++) {
-          try {
-            const data = await refreshUrlsQn(filesNamesSplit[i], cdnManager);
-            completeFiles += filesNamesSplit[i].length;
-            spinner.text = tip(completeFiles, filesTotal);
-          } catch (error) {
-            throw new Error(error);
-          }
-        }
-      }
-      if (type.includes("ali-oss")) {
-        const {
-          accessKeyId,
-          accessKeySecret,
-          aliCdnDomain,
-          aliDist,
-          endpoint,
-          apiVersion,
-          RegionId,
-          ObjectType,
-          aliFilesNames,
-        } = this.config;
-        let client = new Core({
-          accessKeyId: accessKeyId,
-          accessKeySecret: accessKeySecret,
-          endpoint: endpoint || "https://cdn.aliyuncs.com",
-          apiVersion: apiVersion || "2018-05-10",
-        });
-        let requestOption = {
-          method: "POST",
-        };
-        let params = {
-          RegionId: RegionId || "cn-hangzhou",
-          ObjectPath: "",
-          ObjectType: ObjectType || "File",
-        };
-        let refreshUrls =
-          aliFilesNames && aliFilesNames.length
-            ? handlePaths(aliCdnDomain, aliDist, aliFilesNames)
-            : handlePaths(aliCdnDomain, aliDist, filesNames);
-        let filesTotal = refreshUrls.length;
-        let objectPathSplit = chunk(refreshUrls, 999);
-        let completeFiles = 0;
-        for (var i = 0; i < objectPathSplit.length; i++) {
-          try {
-            params.ObjectPath = objectPathSplit[i].join("\\n");
-            console.log(params.ObjectPath);
-            const data = await client.request(
-              "RefreshObjectCaches",
-              params,
-              requestOption
-            );
-            completeFiles += objectPathSplit[i].length;
-            spinner.text = tip(completeFiles, filesTotal);
-          } catch (error) {
-            throw new Error(error);
-          }
-        }
-      }
-    };
+   
     if (compiler) {
-      const getFilesNameByWebpack = (file) => {
-        filesNames.push(file);
-        return Promise.resolve();
-      };
-      compiler.hooks.assetEmitted.tapPromise(
-        "CdnCacheRefresh",
-        getFilesNameByWebpack
-      );
-      compiler.hooks.done.tapAsync("CdnCacheRefresh", doWithWebpack);
+      this.doWithWebpack(compiler);
     } else {
-      doWithoutWebpack();
+      this.doWithoutWebpack();
     }
+  }
+  doWithWebpack(compiler) {
+    compiler.hooks.assetEmitted.tapPromise("CdnCacheRefresh", (file) => {
+      this.webPackFilesName.push(file);
+      return Promise.resolve();
+    });
+    compiler.hooks.done.tapAsync(
+      "CdnCacheRefresh",
+      async (compilation, callback) => {
+        const type = Object.keys(this.config);
+        for (var i = 0; i < type.length; i++) {
+          this.spinner.start();
+          try {
+            if (type[i] == "qiniu") await this.reFreshQnFiles(type[i]);
+            if (type[i] == "aliOss") await this.reFreshAliOssFiles(type[i]);
+          } catch (error) {
+            throw new Error(error);
+          }
+        }
+        this.spinner.succeed();
+        callback();
+      }
+    );
+  }
+  async doWithoutWebpack() {
+    const type = Object.keys(this.config);
+    for (var i = 0; i < type.length; i++) {
+      this.spinner.start();
+      try {
+        if (type[i] == "qiniu") await this.reFreshQnFiles(type[i]);
+        if (type[i] == "aliOss") await this.reFreshAliOssFiles(type[i]);
+      } catch (error) {
+        throw new Error(error);
+      }
+    }
+    this.spinner.succeed();
+  }
+  async reFreshAliOssFiles(type) {
+    const {
+      accessKeyId,
+      accessKeySecret,
+      domain,
+      dist,
+      endpoint,
+      apiVersion,
+      RegionId,
+      ObjectType,
+      filesNames,
+    } = this.config[type];
+    let client = new Core({
+      accessKeyId: accessKeyId,
+      accessKeySecret: accessKeySecret,
+      endpoint: endpoint || "https://cdn.aliyuncs.com",
+      apiVersion: apiVersion || "2018-05-10",
+    });
+    let requestOption = {
+      method: "POST",
+    };
+    let params = {
+      RegionId: RegionId || "cn-hangzhou",
+      ObjectPath: "",
+      ObjectType: ObjectType || "File",
+    };
+    let refreshUrls =
+      filesNames && filesNames.length
+        ? handlePaths(domain, dist, filesNames)
+        : handlePaths(domain, dist, this.webPackFilesName);
+    let objectPathSplit = chunk(refreshUrls, 999);
+    let completeFiles = 0;
+    for (var i = 0; i < objectPathSplit.length; i++) {
+      try {
+        params.ObjectPath = objectPathSplit[i].join("\\n");
+        console.log(params.ObjectPath);
+       const data= await client.request("RefreshObjectCaches", params, requestOption);
+       console.log(JSON.stringify(data));
+        completeFiles += objectPathSplit[i].length;
+        this.text = tip(completeFiles, refreshUrls.length);
+      } catch (error) {
+        throw new Error(error);
+      }
+    }
+  }
+  async reFreshQnFiles(type) {
+    const { accessKey, secretKey, domain, dist, filesNames } = this.config[
+      type
+    ];
+    let mac = new qiniu.auth.digest.Mac(accessKey, secretKey);
+    let cdnManager = new qiniu.cdn.CdnManager(mac);
+    let refreshUrls =
+      filesNames && filesNames.length
+        ? handlePaths(domain, dist, filesNames)
+        : handlePaths(domain, dist, this.webPackFilesName);
+    let completeFiles = 0;
+    let filesNamesSplit = chunk(refreshUrls, 99);
+    // 刷新链接，单次请求链接不可以超过100个，如果超过，请分批发送请求
+    for (var i = 0; i < filesNamesSplit.length; i++) {
+      try {
+       const data= await this.cdnManagerPromise(filesNamesSplit[i], cdnManager);
+       console.log(JSON.stringify(data));
+        completeFiles += filesNamesSplit[i].length;
+        this.spinner.text = tip(completeFiles, refreshUrls.length);
+      } catch (error) {
+        throw new Error(error);
+      }
+    }
+  }
+  async cdnManagerPromise(urlsToRefresh, cdnManager) {
+    return new Promise((resolve, reject) => {
+      cdnManager.refreshUrls(urlsToRefresh, (err, respBody, respInfo) => {
+        if (err) reject(err);
+        if (respInfo.statusCode == 200) {
+          resolve(respBody);
+        }
+      });
+    });
   }
 }
 
 module.exports = CdnCacheRefresh;
+
