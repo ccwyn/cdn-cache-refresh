@@ -25,7 +25,8 @@ const checkOptions = (options = {}) => {
   }
   if (type.includes("aliOss")) {
     if (!options.aliOss.accessKeyId) errStr += "\n accessKeyId not specified";
-    if (!options.aliOss.accessKeySecret) errStr += "\n accessKeySecret not specified";
+    if (!options.aliOss.accessKeySecret)
+      errStr += "\n accessKeySecret not specified";
     if (!options.aliOss.domain) errStr += "\n aliOss domain not specified";
     if (!options.aliOss.dist) errStr += "\n aliOss dist not specified";
   }
@@ -52,10 +53,9 @@ class CdnCacheRefresh {
     this.configErrStr = checkOptions(this.config);
     if (this.configErrStr) throw new Error(this.configErrStr);
     this.webPackFilesName = [];
-    this.spinner = ora({ color: "green", text: "refresh cnd start" })
+    this.spinner = ora({ color: "green", text: "refresh cnd start" });
   }
   apply(compiler) {
-   
     if (compiler) {
       this.doWithWebpack(compiler);
     } else {
@@ -133,9 +133,7 @@ class CdnCacheRefresh {
     for (var i = 0; i < objectPathSplit.length; i++) {
       try {
         params.ObjectPath = objectPathSplit[i].join("\\n");
-        console.log(params.ObjectPath);
-       const data= await client.request("RefreshObjectCaches", params, requestOption);
-       console.log(JSON.stringify(data));
+        await client.request("RefreshObjectCaches", params, requestOption);
         completeFiles += objectPathSplit[i].length;
         this.text = tip(completeFiles, refreshUrls.length);
       } catch (error) {
@@ -158,8 +156,8 @@ class CdnCacheRefresh {
     // 刷新链接，单次请求链接不可以超过100个，如果超过，请分批发送请求
     for (var i = 0; i < filesNamesSplit.length; i++) {
       try {
-       const data= await this.cdnManagerPromise(filesNamesSplit[i], cdnManager);
-       console.log(JSON.stringify(data));
+        await this.cdnManagerPromise(filesNamesSplit[i], cdnManager);
+
         completeFiles += filesNamesSplit[i].length;
         this.spinner.text = tip(completeFiles, refreshUrls.length);
       } catch (error) {
@@ -180,4 +178,3 @@ class CdnCacheRefresh {
 }
 
 module.exports = CdnCacheRefresh;
-
