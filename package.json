@@ -1,0 +1,31 @@
+{
+  "name": "cdn-cache-refresh",
+  "version": "1.0.0",
+  "description": "刷新项目中托管到cdn上的资源,保证不被缓存",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ccwyn/cdn-cache-refresh.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ccwyn/cdn-cache-refresh/issues"
+  },
+  "homepage": "https://github.com/ccwyn/cdn-cache-refresh#readme",
+  "keywords": [
+    "cdn-cache-refresh",
+    "ali-oss",
+    "qiniu",
+    "webpack",
+    "plugin"
+  ],
+  "dependencies": {
+    "@alicloud/pop-core": "^1.7.10",
+    "ora": "^3.2.0",
+    "qiniu": "^7.2.1"
+  },
+  "author": "wyn",
+  "license": "ISC"
+}
