@@ -77,7 +77,7 @@ class CdnCacheRefresh {
     compiler.hooks.done.tapAsync(
       "CdnCacheRefresh",
       async (compilation, callback) => {
-        this.doWithoutWebpack();
+        this.doWithoutWebpack(callback);
       }
     );
   }
