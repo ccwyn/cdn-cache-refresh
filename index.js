@@ -46,6 +46,13 @@ const chunk = (array, size) => {
 const handlePaths = (domain, dist, filesNames) => {
   return filesNames.map((item) => `${domain}/${dist}/${item}`);
 };
+const sleep = async (millisecond = 200) => {
+  return new Promise((res) => {
+    setTimeout(() => {
+      res();
+    }, millisecond);
+  });
+};
 
 class CdnCacheRefresh {
   constructor(options = {}) {
@@ -70,33 +77,26 @@ class CdnCacheRefresh {
     compiler.hooks.done.tapAsync(
       "CdnCacheRefresh",
       async (compilation, callback) => {
-        const type = Object.keys(this.config);
-        for (var i = 0; i < type.length; i++) {
-          this.spinner.start();
-          try {
-            if (type[i] == "qiniu") await this.reFreshQnFiles(type[i]);
-            if (type[i] == "aliOss") await this.reFreshAliOssFiles(type[i]);
-          } catch (error) {
-            throw new Error(error);
-          }
-        }
-        this.spinner.succeed();
-        callback();
+        this.doWithoutWebpack();
       }
     );
   }
-  async doWithoutWebpack() {
+  async doWithoutWebpack(callback) {
     const type = Object.keys(this.config);
     for (var i = 0; i < type.length; i++) {
       this.spinner.start();
       try {
-        if (type[i] == "qiniu") await this.reFreshQnFiles(type[i]);
+        if (type[i] == "qiniu") {
+          await this.reFreshQnFiles(type[i]);
+          await sleep(300);
+        }
         if (type[i] == "aliOss") await this.reFreshAliOssFiles(type[i]);
       } catch (error) {
         throw new Error(error);
       }
     }
     this.spinner.succeed();
+    callback && callback();
   }
   async reFreshAliOssFiles(type) {
     const {
@@ -157,7 +157,6 @@ class CdnCacheRefresh {
     for (var i = 0; i < filesNamesSplit.length; i++) {
       try {
         await this.cdnManagerPromise(filesNamesSplit[i], cdnManager);
-
         completeFiles += filesNamesSplit[i].length;
         this.spinner.text = tip(completeFiles, refreshUrls.length);
       } catch (error) {

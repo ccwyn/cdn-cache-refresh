@@ -1,6 +1,6 @@
 {
   "name": "cdn-cache-refresh",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "刷新项目中托管到cdn上的资源,保证不被缓存",
   "main": "index.js",
   "scripts": {
